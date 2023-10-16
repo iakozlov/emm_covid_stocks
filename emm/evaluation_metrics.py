@@ -5,6 +5,7 @@ import statsmodels.api as sm
 
 from copy import deepcopy
 from scipy.spatial.distance import cosine
+import numpy as np
 
 
 warnings.filterwarnings('error')
@@ -76,16 +77,21 @@ def avg(collection):
         return 0
 
 
-def r_hat(df, col_x, col_y):
-    avg_x = avg(df[col_x])
-    avg_y = avg(df[col_y])
-    top = df.apply(lambda row: (row[col_x] - avg_x) * (row[col_y] - avg_y), axis=1)
-    bottom_x = df.apply(lambda row: (row[col_x] - avg_x) ** 2, axis=1)
-    bottom_y = df.apply(lambda row: (row[col_y] - avg_y) ** 2, axis=1)
-    try:
-        return top.sum() / math.sqrt(bottom_x.sum() * bottom_y.sum())
-    except Warning:  # Both x.sum() and y.sum() equal zero
-        return 0
+def r_hat(df, col_x):
+    #avg_x = avg(df[col_x])
+    #avg_y = avg(df[col_y])
+    vec1 = np.zeros(19)
+    for x, y in df['Ticker_diff'].items():
+        vec1 = np.add(vec1, np.array(list(y)))
+    #print(vec1 / len(df))
+    return vec1 / len(df)
+    #top = df.apply(lambda row: (row[col_x] - avg_x) * (row[col_y] - avg_y), axis=1)
+    #bottom_x = df.apply(lambda row: (row[col_x] - avg_x) ** 2, axis=1)
+    #bottom_y = df.apply(lambda row: (row[col_y] - avg_y) ** 2, axis=1)
+    #try:
+        #return top.sum() / math.sqrt(bottom_x.sum() * bottom_y.sum())
+    #except Warning:  # Both x.sum() and y.sum() equal zero
+        #return 0
 
 
 def heatmap(subgroup_target, dataset_target, use_complement=False):
@@ -114,16 +120,24 @@ def correlation(subgroup_target, dataset_target, use_complement=False):
     :return:
     """
     global cache
-    if len(subgroup_target.columns) != 2:
-        raise ValueError("Correlation metric expects exactly 2 columns as target variables")
-    x_col, y_col = list(subgroup_target.columns)
+    print("In correlation func")
+    #if len(subgroup_target.columns) != 2:
+    #    raise ValueError("Correlation metric expects exactly 2 columns as target variables")
+    #x_col, y_col = list(subgroup_target.columns)
+    x_col = list(subgroup_target.columns)
     if cache is None:
-        cache = r_hat(dataset_target, x_col, y_col)
+        cache = r_hat(dataset_target, x_col)
     # print(subgroup_target, x_col, y_col)
-    r_gd = r_hat(subgroup_target, x_col, y_col)
-    if math.isnan(r_gd):
-        return 0, 0
-    return entropy(subgroup_target, dataset_target) * abs(r_gd - cache), r_gd
+    r_gd = r_hat(subgroup_target, x_col)
+    corr_coeff = np.corrcoef(cache, r_gd)[0][1]
+    if corr_coeff < 0.5:
+        print(corr_coeff)
+    #if math.isnan(r_gd):
+        #return 0, 0
+    entr = entropy(subgroup_target, dataset_target)
+    reverse_coeff = len(dataset_target) / len(subgroup_target)
+    #print(entr)
+    return entr * corr_coeff, corr_coeff
 
 
 def regression(subgroup_target, dataset_target, use_complement=False):

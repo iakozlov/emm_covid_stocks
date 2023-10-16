@@ -21,4 +21,4 @@ class Subgroup:
         return len(self.data)
 
     def print(self):
-        logging.debug(f"{str(self.description)} {self.score} ({self.size})")
+        print(f"{str(self.description)} {self.score} ({self.size})")
