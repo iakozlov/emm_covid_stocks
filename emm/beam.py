@@ -1,3 +1,4 @@
+import math
 import logging
 import numpy as np
 import pandas as pd
@@ -17,7 +18,7 @@ class Beam:
         except (KeyError, TypeError):
             self.candidate_size = settings['width'] ** 2
         self.strategy = settings['strategy']
-        self.min_score = 0.1
+        self.min_score = None
         self.scores = []
 
     def add(self, subgroup: Subgroup):

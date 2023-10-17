@@ -4,3 +4,4 @@ venv/
 todo
 docs/_build/
 venv2/
+*.pkl

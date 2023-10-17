@@ -16,9 +16,8 @@ from workers import create_subgroups, evaluate_subgroups, beam_adder
 
 
 # logger = logging.getLogger(__name__)
-m = Manager()
-evaluate_queue = m.Queue()
-add_queue = m.Queue()
+evaluate_queue = Queue()
+add_queue = Queue()
 
 
 class EMM:
@@ -72,11 +71,12 @@ class EMM:
 
     def search(self, data: pd.DataFrame, target_cols: Union[List[str], str], descriptive_cols: List[str] = None):
         logging.info("Start")
-        df = deepcopy(data)
-        data, translations = downsize(deepcopy(data))
-        self.settings['object_cols'] = translations
-        self.dataset = Subgroup(df, Description('all'))
-        _, self.dataset.target = self.evaluation_function(df[target_cols], df[target_cols])
+        # data, translations = downsize(deepcopy(data)) # LVO/IVAN: we do not downsize since it will remove the time series, TODO send issue to library
+        # self.settings['object_cols'] = translations
+        data = deepcopy(data)
+        self.settings['object_cols'] = dict()
+        self.dataset = Subgroup(data, Description('all'))
+        _, self.dataset.target = self.evaluation_function(data[target_cols], data[target_cols])
         self.beam = Beam(self.dataset, self.settings)
         target_cols = list(target_cols,)
         if descriptive_cols is None:
@@ -85,31 +85,28 @@ class EMM:
             raise ValueError("The target and descriptive columns may not overlap!")
         if any(c not in data.columns for c in descriptive_cols + target_cols):
             raise ValueError("All specified columns should be present in the dataset")
-        self.dataset_target = df[target_cols]
+        self.dataset_target = data[target_cols]
         self.target_columns = target_cols
         while self.depth > 0:
             self.make_subgroups(descriptive_cols)
             self.depth -= 1
             self.beam.select_cover_based()
-        #print(translations)
-        #self.beam.decrypt_descriptions(translations)
-        #self.beam.print()
-        for subgroup in self.beam.subgroups:
-            subgroup.print()
+        # self.beam.decrypt_descriptions(translations)
+        self.beam.print()
         cleanup()
 
     def visualise(self, vis_type: Union[callable, str] = None, subgroups: int = None, cols: int = 3,
-                  include_dataset=True, target_columns = None):
+                  include_dataset=True):
         if vis_type is None:
             vis_type = self.evaluation_metric
         if subgroups is None:
             subgroups = len(self.beam.subgroups)
         if hasattr(vis_type, '__call__'):
-            vis_type(self.dataset, self.beam.subgroups, target_columns, self.settings['object_cols'], cols,
+            vis_type(self.dataset, self.beam.subgroups, self.target_columns, self.settings['object_cols'], cols,
                      subgroups, include_dataset)
         else:
             try:
-                visualizations[vis_type](self.dataset, self.beam.subgroups, target_columns,
+                visualizations[vis_type](self.dataset, self.beam.subgroups, self.target_columns,
                                          self.settings['object_cols'], cols, subgroups, include_dataset)
             except KeyError as e:
                 raise ValueError(f"Nu such visualization: {vis_type}")
