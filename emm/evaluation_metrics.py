@@ -77,10 +77,11 @@ def avg(collection):
         return 0
 
 
-def r_hat(df, col_x):
+def get_average_price_change(df, col_x):
     #avg_x = avg(df[col_x])
     #avg_y = avg(df[col_y])
-    vec1 = np.zeros(19)
+    vec_len = len(list(df['Ticker_diff'].items())[0][1])
+    vec1 = np.zeros(vec_len)
     for x, y in df['Ticker_diff'].items():
         vec1 = np.add(vec1, np.array(list(y)))
     #print(vec1 / len(df))
@@ -126,18 +127,17 @@ def correlation(subgroup_target, dataset_target, use_complement=False):
     #x_col, y_col = list(subgroup_target.columns)
     x_col = list(subgroup_target.columns)
     if cache is None:
-        cache = r_hat(dataset_target, x_col)
+        cache = get_average_price_change(dataset_target, x_col)
     # print(subgroup_target, x_col, y_col)
-    r_gd = r_hat(subgroup_target, x_col)
+    r_gd = get_average_price_change(subgroup_target, x_col)
     corr_coeff = np.corrcoef(cache, r_gd)[0][1]
-    if corr_coeff < 0.5:
-        print(corr_coeff)
+    print(f'Correlation: {corr_coeff}')
     #if math.isnan(r_gd):
         #return 0, 0
     entr = entropy(subgroup_target, dataset_target)
     reverse_coeff = len(dataset_target) / len(subgroup_target)
-    #print(entr)
-    return entr * corr_coeff, corr_coeff
+    print(f'Measure: {entr*corr_coeff}')
+    return entr * abs(1 - corr_coeff), corr_coeff
 
 
 def regression(subgroup_target, dataset_target, use_complement=False):
